@@ -4,7 +4,7 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "pnpm dev"
   },
   "dependencies": {
     "express": "^5.2.1"
