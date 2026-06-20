@@ -7,10 +7,10 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "^5.2.1"
   },
   "packageManager": "pnpm@11.8.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=24.0.0"
   }
 }
