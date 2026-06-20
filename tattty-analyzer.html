@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaTTTy Image Analyzer</title>
+<style>
+  :root{
+    --bg:#f4f4f1;--panel:#fff;--panel2:#faf9f6;--border:#111;--line:#e3e3de;
+    --text:#1a1a1a;--muted:#6b6b66;--accent:#111;--accent-text:#fff;
+    --ok:#0a7d4f;--okbg:#e3f5ec;--run:#9a6a00;--runbg:#fdf3da;
+    --err:#b3261e;--errbg:#fbe6e5;--pend:#6b6b66;--pendbg:#ededea;
+    --up:#1a4fb3;--upbg:#e6edfb;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5;padding:24px}
+  h1{font-size:22px;font-weight:800;margin-bottom:4px;letter-spacing:-.5px}
+  .sub{color:var(--muted);font-size:12px;margin-bottom:24px;font-family:ui-monospace,'SF Mono',Consolas,monospace}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  @media(max-width:1000px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:2px solid var(--border);border-radius:12px;padding:20px}
+  label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px;margin-top:16px;font-weight:700}
+  label:first-of-type{margin-top:0}
+  input[type=text],input[type=password],textarea,select{width:100%;background:var(--panel2);border:1.5px solid var(--line);border-radius:7px;color:var(--text);padding:10px;font-family:inherit;font-size:13px;resize:vertical}
+  textarea{font-family:ui-monospace,'SF Mono',Consolas,monospace;min-height:90px}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--border)}
+  .drop{border:2px dashed var(--border);border-radius:9px;padding:30px 16px;text-align:center;color:var(--muted);cursor:pointer;transition:all .15s;margin-top:6px;font-weight:600}
+  .drop:hover,.drop.over{background:var(--panel2);color:var(--text)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .btnrow{display:flex;gap:10px;margin-top:20px}
+  button.action{flex:1;background:var(--accent);color:var(--accent-text);border:2px solid var(--border);border-radius:8px;padding:13px;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;transition:opacity .15s}
+  button.action:hover:not(:disabled){opacity:.85}
+  button.action:disabled{opacity:.35;cursor:not-allowed}
+  button.ghost{background:var(--panel);color:var(--text);border:2px solid var(--border);border-radius:8px;padding:13px 18px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+  button.ghost:hover{background:var(--panel2)}
+  button.ghost:disabled{opacity:.35;cursor:not-allowed}
+  .count{font-size:12px;color:var(--muted);margin-top:10px;text-align:right;font-family:ui-monospace,monospace}
+  .hint{font-size:11px;color:var(--muted);margin-top:6px}
+  .stats{display:flex;gap:14px;margin-top:16px;font-family:ui-monospace,monospace;font-size:12px;flex-wrap:wrap}
+  .stat b{font-size:18px;display:block}
+  .stat.ok b{color:var(--ok)}.stat.err b{color:var(--err)}
+  .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:14px;border:1px solid var(--border)}
+  .bar .fill{height:100%;background:var(--accent);width:0%;transition:width .25s}
+  .toprow{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px}
+  .tlabel{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;font-size:13px}
+  th{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);position:sticky;top:0;background:var(--panel);border-bottom:2px solid var(--border)}
+  td.imgcell{width:60px}
+  td.imgcell img{width:48px;height:48px;object-fit:cover;border-radius:5px;border:1.5px solid var(--border)}
+  .status{display:inline-block;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;border:1px solid var(--border);white-space:nowrap}
+  .status.pending{background:var(--pendbg);color:var(--pend)}
+  .status.uploading{background:var(--upbg);color:var(--up)}
+  .status.analyzing{background:var(--runbg);color:var(--run)}
+  .status.writing{background:var(--runbg);color:var(--run)}
+  .status.retrying{background:var(--runbg);color:var(--run)}
+  .status.completed{background:var(--okbg);color:var(--ok)}
+  .status.skipped{background:#efe7d6;color:#7a5c00}
+  .status.error{background:var(--errbg);color:var(--err)}
+  .result{white-space:pre-wrap;word-break:break-word;max-width:480px}
+  .urlcell{font-family:ui-monospace,monospace;font-size:11px;word-break:break-all;max-width:200px;color:var(--up)}
+  .meta{font-size:10px;color:var(--muted);margin-top:4px;font-family:ui-monospace,monospace}
+  .empty{color:var(--muted);text-align:center;padding:44px;font-size:13px}
+  .tablescroll{max-height:70vh;overflow-y:auto}
+  .rmrow{background:var(--panel);border:1.5px solid var(--border);border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:16px;line-height:1;color:var(--err);font-weight:800;padding:0}
+  .rmrow:hover{background:var(--errbg)}
+</style>
+</head>
+<body>
+  <h1>TaTTTy Image Analyzer</h1>
+  <div class="sub">upload &rarr; worker URL &rarr; Qwen3-VL &rarr; Zoho Sheet &middot; sequential &middot; gated on completed</div>
+
+  <div class="grid">
+    <div class="panel">
+      <label>HF Token</label>
+      <input type="password" id="token" placeholder="hf_..." autocomplete="off">
+      <button class="ghost" id="savetoken" style="width:100%;margin-top:8px;padding:9px">Save token in file</button>
+      <div class="hint">Bakes token into a downloaded copy of this file so you never re-enter it.</div>
+
+      <label>Zoho Webhook URL (changes often &mdash; paste current)</label>
+      <input type="text" id="webhook" placeholder="https://flow.zoho.com/.../webhook/incoming?zapikey=...">
+      <div class="hint">This is where each completed row is sent.</div>
+
+      <div class="row2">
+        <div>
+          <label>Provider</label>
+          <select id="provider">
+            <option value=":novita">novita</option>
+            <option value=":fireworks-ai">fireworks-ai</option>
+            <option value=":fastest">fastest</option>
+            <option value="">default</option>
+          </select>
+        </div>
+        <div>
+          <label>Max tokens</label>
+          <input type="text" id="maxtokens" value="512">
+        </div>
+      </div>
+
+      <label>Analysis Prompt (sent to model with every image)</label>
+      <textarea id="prompt">Analyze this image. Be precise and literal &mdash; describe only what is actually present, no guessing. Cover: main subject, style, dominant colors, notable objects, and any visible text.</textarea>
+
+      <label>Images (from your computer)</label>
+      <div class="drop" id="drop">Drag &amp; drop or click &mdash; thousands OK</div>
+      <input type="file" id="file" accept="image/png,image/jpeg,image/webp" multiple style="display:none">
+      <div class="count" id="count">0 images loaded</div>
+
+      <div class="btnrow">
+        <button class="action" id="run">Analyze</button>
+        <button class="ghost" id="stop" disabled>Stop</button>
+        <button class="ghost" id="clear">Clear</button>
+      </div>
+
+      <div class="bar"><div class="fill" id="fill"></div></div>
+      <div class="stats">
+        <div class="stat"><b id="s-total">0</b>total</div>
+        <div class="stat ok"><b id="s-done">0</b>done</div>
+        <div class="stat err"><b id="s-err">0</b>skipped</div>
+        <div class="stat"><b id="s-tok">0</b>tokens</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="toprow">
+        <span class="tlabel">Datasheet (mirrors Zoho rows)</span>
+        <button class="ghost" id="export" style="padding:9px 14px">Export JSON</button>
+      </div>
+      <div class="tablescroll" id="tablewrap">
+        <div class="empty">No images yet. Add images and click Analyze.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+//=====================================================================
+const EMBEDDED_TOKEN = "";
+//=====================================================================
+const WORKER_URL = "https://model.avi-kay2019.workers.dev";
+const HF_ENDPOINT = "https://router.huggingface.co/v1/chat/completions";
+const MODEL_BASE = "Qwen/Qwen3-VL-235B-A22B-Instruct";
+const ZOHO_WEBHOOK_DEFAULT = "https://flow.zoho.com/916614704/flow/webhook/incoming?zapikey=1001.f2d435dcfe245c053095ab6a9fad6e88.b6ff2f70899c4867174c3263036646df&isdebug=true";
+
+let images = [];
+let running = false, stopFlag = false, halted = false;
+let currentId = null, onDeckId = null;
+const $ = id => document.getElementById(id);
+const drop = $('drop'), fileInput = $('file');
+if (EMBEDDED_TOKEN) $('token').value = EMBEDDED_TOKEN;
+$('webhook').value = ZOHO_WEBHOOK_DEFAULT;
+
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); addFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', e => addFiles(e.target.files));
+
+function addFiles(list){
+  const files = Array.from(list).filter(f => f.type.startsWith('image/'));
+  files.forEach(f => images.push({
+    id: crypto.randomUUID(), file: f, name: f.name, type: f.type,
+    thumb: URL.createObjectURL(f),
+    status:'pending', url:'', result:'', tokens:null, error:''
+  }));
+  renderTable(); updateCounts();
+}
+
+function updateCounts(){
+  $('count').textContent = images.length + ' images loaded';
+  $('s-total').textContent = images.length;
+  $('s-done').textContent = images.filter(i=>i.status==='completed').length;
+  $('s-err').textContent = images.filter(i=>i.status==='skipped').length;
+  $('s-tok').textContent = images.reduce((a,i)=>a+(i.tokens||0),0).toLocaleString();
+}
+
+function renderTable(){
+  const wrap = $('tablewrap');
+  if(images.length===0){ wrap.innerHTML='<div class="empty">No images yet. Add images and click Analyze.</div>'; return; }
+  const visible = images.length>300 ? images.filter(i=>i.status!=='pending') : images;
+  let rows = visible.map(img=>{
+    const idx = images.indexOf(img)+1;
+    // removable only if: still pending, NOT the one processing, NOT the on-deck (next) one
+    const removable = img.status==='pending' && img.id!==currentId && img.id!==onDeckId;
+    const rmBtn = removable ? '<button class="rmrow" data-id="'+img.id+'" title="Remove from queue">&times;</button>' : '';
+    return '<tr>'+
+      '<td>'+idx+'</td>'+
+      '<td class="imgcell"><img src="'+img.thumb+'" loading="lazy"></td>'+
+      '<td>'+esc(img.name)+'</td>'+
+      '<td><span class="status '+img.status+'">'+img.status+'</span></td>'+
+      '<td class="urlcell">'+(img.url?esc(img.url):'&mdash;')+'</td>'+
+      '<td><div class="result">'+((img.status==='error'||img.status==='skipped'||img.status==='retrying')?'<span style="color:var(--err)">'+esc(img.error)+'</span>':esc(img.result||'&mdash;'))+'</div>'+(img.tokens!=null?'<div class="meta">'+img.tokens+' tokens</div>':'')+'</td>'+
+      '<td>'+rmBtn+'</td>'+
+    '</tr>';
+  }).join('');
+  const note = images.length>300 ? '<div class="meta" style="padding:8px">Showing processed rows only ('+visible.length+') &mdash; full set in JSON.</div>' : '';
+  wrap.innerHTML = note+'<table><thead><tr><th>#</th><th>Img</th><th>File</th><th>Status</th><th>Image URL</th><th>Prompt (analysis)</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+  // wire remove buttons
+  wrap.querySelectorAll('.rmrow').forEach(b=> b.onclick=()=>{
+    const id=b.dataset.id;
+    const t=images.find(i=>i.id===id);
+    // re-check at click time — guards the "clicked the same second it became next" race
+    if(!t || t.status!=='pending' || t.id===currentId || t.id===onDeckId) return;
+    URL.revokeObjectURL(t.thumb);
+    images = images.filter(i=>i.id!==id);
+    renderTable(); updateCounts();
+  });
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// STEP 1: upload to worker -> { url: "...images/...png" }
+async function uploadToWorker(img){
+  const res = await fetch(WORKER_URL, {
+    method:'POST',
+    headers:{ 'X-File-Type':'image', 'Content-Type':img.type },
+    body: img.file
+  });
+  if(!res.ok){ throw new Error('Worker HTTP '+res.status+': '+(await res.text()).slice(0,200)); }
+  const data = await res.json();
+  if(!data.url) throw new Error('Worker returned no url: '+JSON.stringify(data).slice(0,200));
+  return data.url;
+}
+
+// STEP 2: send URL to HF -> analysis text
+async function analyzeUrl(url, token, provider, prompt, maxTokens){
+  const body = {
+    model: MODEL_BASE + provider, stream:false, max_tokens:maxTokens,
+    messages:[{ role:'user', content:[ {type:'text',text:prompt}, {type:'image_url',image_url:{url}} ] }]
+  };
+  const res = await fetch(HF_ENDPOINT, {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if(!res.ok) throw new Error('HF HTTP '+res.status+': '+(data.error?.message||data.error||JSON.stringify(data)).slice(0,200));
+  return { text: data.choices?.[0]?.message?.content ?? '(empty)', tokens: data.usage?.total_tokens ?? null };
+}
+
+// STEP 3: fire webhook to Zoho Flow (matches tested payload exactly)
+async function writeZohoRow(imageUrl, analysisText){
+  const webhook = $('webhook').value.trim();
+  if(!webhook) throw new Error('No Zoho webhook URL set.');
+  const body = {
+    image_url: imageUrl,
+    prompt: analysisText,
+    status: 'COMPLETED'
+  };
+  const res = await fetch(webhook, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  const txt = await res.text();
+  if(!res.ok) throw new Error('Zoho webhook HTTP '+res.status+': '+txt.slice(0,200));
+  return true;
+}
+
+// Runs the full chain for one image WITH up to 3 attempts.
+// Returns true if it ultimately succeeded, false if it failed all 3.
+async function processOne(img, token, provider, prompt, maxTokens){
+  const MAX_ATTEMPTS = 3;
+  let lastErr = '';
+  for(let attempt=1; attempt<=MAX_ATTEMPTS; attempt++){
+    try{
+      img.attempt = attempt;
+      img.status='uploading'; renderTable();
+      img.url = await uploadToWorker(img);
+      renderTable();
+
+      img.status='analyzing'; renderTable();
+      const a = await analyzeUrl(img.url, token, provider, prompt, maxTokens);
+      // treat an empty / missing prompt as a failure worth retrying
+      const text = (a.text || '').trim();
+      if(!text || text==='(empty)') throw new Error('Model returned no prompt');
+      img.result = text; img.tokens = a.tokens;
+      renderTable();
+
+      img.status='writing'; renderTable();
+      await writeZohoRow(img.url, img.result);
+
+      img.status='completed';
+      renderTable(); updateCounts();
+      return true;
+    }catch(e){
+      lastErr = e.message;
+      img.error = 'attempt '+attempt+'/'+MAX_ATTEMPTS+': '+e.message;
+      img.status='retrying'; renderTable(); updateCounts();
+      // small backoff before next try (skip wait after final attempt)
+      if(attempt < MAX_ATTEMPTS) await new Promise(r=>setTimeout(r, 800));
+    }
+  }
+  // all attempts failed -> skip this image
+  img.status='skipped'; img.error='skipped after 3 failed attempts: '+lastErr;
+  renderTable(); updateCounts();
+  return false;
+}
+
+$('run').addEventListener('click', async ()=>{
+  if(running) return;
+  const token = $('token').value.trim();
+  if(!token){ alert('Paste your HF token.'); return; }
+  if(!$('webhook').value.trim()){ alert('Paste your Zoho webhook URL.'); return; }
+  if(images.length===0){ alert('Add images.'); return; }
+  const provider=$('provider').value, prompt=$('prompt').value.trim()||'Describe this image.', maxTokens=parseInt($('maxtokens').value)||512;
+
+  running=true; stopFlag=false; halted=false;
+  $('run').disabled=true; $('run').textContent='Analyzing\u2026';
+  $('stop').disabled=false; $('clear').disabled=true;
+
+  let consecutiveSkips = 0;
+  let processed = 0;
+
+  // dynamic queue: re-scan each loop so images ADDED mid-run get picked up,
+  // and REMOVED ones simply won't be found.
+  while(true){
+    if(stopFlag) break;
+    // next image still needing work
+    const img = images.find(i=>i.status==='pending');
+    if(!img) break; // queue empty
+
+    currentId = img.id;          // the one being processed (locked)
+    const after = images.filter(i=>i.status==='pending' && i.id!==img.id);
+    onDeckId = after.length ? after[0].id : null;  // the next one (locked from removal)
+    renderTable();
+
+    const ok = await processOne(img, token, provider, prompt, maxTokens);
+    processed++;
+
+    if(ok){
+      consecutiveSkips = 0;
+    } else {
+      consecutiveSkips++;
+      if(consecutiveSkips >= 2){
+        halted = true;
+        break;  // two images in a row failed all 3 -> real problem, stop everything
+      }
+    }
+    const total = images.length;
+    const doneCount = images.filter(i=>i.status==='completed'||i.status==='skipped').length;
+    $('fill').style.width = (doneCount/total*100)+'%';
+  }
+
+  currentId=null; onDeckId=null;
+  running=false;
+  $('run').disabled=false; $('run').textContent='Analyze';
+  $('stop').disabled=true; $('clear').disabled=false;
+  renderTable();
+
+  if(halted){
+    alert('HALTED: two images in a row failed all 3 attempts. That points to a workflow problem (worker, model, token, or webhook) — not bad images. Fix it, then click Analyze to resume the remaining pending images.');
+  } else if(stopFlag){
+    // manual stop, no alert
+  }
+});
+
+$('stop').addEventListener('click', ()=>{ stopFlag=true; $('stop').disabled=true; $('run').textContent='Stopping\u2026'; });
+$('clear').addEventListener('click', ()=>{ if(running) return; images.forEach(i=>URL.revokeObjectURL(i.thumb)); images=[]; $('fill').style.width='0%'; renderTable(); updateCounts(); });
+
+$('export').addEventListener('click', ()=>{
+  const done = images.filter(i=>i.status==='completed');
+  if(done.length===0){ alert('Nothing completed to export yet.'); return; }
+  const out = done.map(img=>({
+    image_url: img.url,
+    prompt: img.result
+  }));
+  const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tattty-analysis.json'; a.click(); URL.revokeObjectURL(a.href);
+});
+
+$('savetoken').addEventListener('click', async ()=>{
+  const token=$('token').value.trim();
+  if(!token){ alert('Paste a token first.'); return; }
+  try{
+    const resp=await fetch(location.href); let html=await resp.text();
+    html=html.replace(/const EMBEDDED_TOKEN = "[^"]*";/, 'const EMBEDDED_TOKEN = "'+token+'";');
+    const blob=new Blob([html],{type:'text/html'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tattty-analyzer.html'; a.click(); URL.revokeObjectURL(a.href);
+    alert('Downloaded tattty-analyzer.html with your token baked in. Use THAT file from now on.');
+  }catch(e){
+    alert('Browser blocked auto-bake (file:// fetch). Manual: open the .html in a text editor, find  const EMBEDDED_TOKEN = "";  paste your token between the quotes, save.');
+  }
+});
+
+renderTable(); updateCounts();
+</script>
+</body>
+</html>
